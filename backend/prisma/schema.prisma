@@ -5,11 +5,66 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  firstName  String
+  lastName   String
+  email      String   @unique
+  password   String
+  phone      String
+  avatarUrl  String?
+  isVerified Boolean  @default(false)
+  rating     Float    @default(5.0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relaciones de este usuario. Un usuario puede publicar muchos viajes, por eso lleva corchetes []
+  trips      Trip[]     // Viajes que ha publicado como conductor
+  packages   Package[] // Paquetes que ha publicado para enviar
+}
+
+model Trip {
+  id              String   @id @default(uuid())
+  originCity      String
+  destinationCity String
+  departureDate   DateTime
+  price           Float
+  maxPackageSize  String   // Ej: "SMALL", "MEDIUM", "LARGE"
+  notes           String?  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  // Relación (Foreign Key): conductor de este viaje
+  driverId        String
+  driver          User     @relation(fields: [driverId], references: [id])
+
+  // Relación: Paquetes que van en el maletero de este viaje
+  packages        Package[]
+}
+
+model Package {
+  id              String   @id @default(uuid())
+  title           String   // Ej: "Maleta grande" o "Guitarra en su funda"
+  description     String?  // Detalles opcionales
+  size            String   // "SMALL", "MEDIUM", "LARGE"
+  originCity      String
+  destinationCity String
+  status          String   @default("PENDING") // PENDING, ACCEPTED, IN_TRANSIT, DELIVERED
+  deliveryPin     String   // Código secreto de 4 dígitos para confirmar entrega
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  // Relación 1: ¿Qué usuario envía este paquete?
+  senderId        String
+  sender          User     @relation(fields: [senderId], references: [id])
+  // Relación 2: ¿En qué viaje va a ir? (Con ? porque al crearse aún no tiene conductor)
+  tripId          String?
+  trip            Trip?    @relation(fields: [tripId], references: [id])
 }
